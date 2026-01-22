@@ -1,0 +1,15 @@
+---
+
+- set_fact:
+    technique: "{{ item }}"
+
+- name: Run Atomic Red Team
+  become: true
+  shell: |
+    pwsh -Command 'Invoke-AtomicTest "{{ technique }}" -GetPrereqs; 
+    Invoke-AtomicTest "{{ technique }}";
+    Invoke-AtomicTest "{{ technique }}" -Cleanup'
+  register: output_art
+
+- debug:
+    var: output_art.stdout_lines

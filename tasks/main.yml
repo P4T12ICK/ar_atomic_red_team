@@ -1,0 +1,60 @@
+---
+
+# Check and install Atomic Red Team on Linux
+- name: Check if Atomic Red Team atomics folder is already installed (Linux)
+  become: true
+  stat:
+    path: /root/AtomicRedTeam/atomics
+  register: art_atomics_installed_linux
+  changed_when: false
+  when: ansible_distribution=="Ubuntu"
+
+- name: Check if Atomic Red Team module exists (Linux)
+  become: true
+  stat:
+    path: /root/AtomicRedTeam/invoke-atomicredteam/Invoke-AtomicRedTeam.psd1
+  register: art_module_installed_linux
+  changed_when: false
+  when: ansible_distribution=="Ubuntu"
+
+- name: Set fact for Atomic Red Team installation needed (Linux)
+  set_fact:
+    art_needs_installation_linux: "{{ (not (art_atomics_installed_linux.stat.exists | default(false))) or (not (art_module_installed_linux.stat.exists | default(false))) }}"
+  changed_when: false
+  when: ansible_distribution=="Ubuntu"
+
+- include_tasks: "install_atomic_red_team_linux.yml"
+  when: ansible_distribution=="Ubuntu" and art_needs_installation_linux | bool
+
+# Check and install Atomic Red Team on Windows
+- name: Check if Atomic Red Team atomics folder is already installed (Windows)
+  win_stat:
+    path: C:\AtomicRedTeam\atomics
+  register: art_atomics_installed_windows
+  changed_when: false
+  when: ansible_distribution is match "Microsoft Windows"
+
+- name: Check if Atomic Red Team module exists (Windows)
+  win_stat:
+    path: C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1
+  register: art_module_installed_windows
+  changed_when: false
+  when: ansible_distribution is match "Microsoft Windows"
+
+- name: Set fact for Atomic Red Team installation needed (Windows)
+  set_fact:
+    art_needs_installation_windows: "{{ (not (art_atomics_installed_windows.stat.exists | default(false))) or (not (art_module_installed_windows.stat.exists | default(false))) }}"
+  changed_when: false
+  when: ansible_distribution is match "Microsoft Windows"
+
+- include_tasks: "install_atomic_red_team_win.yml"
+  when: ansible_distribution is match "Microsoft Windows" and art_needs_installation_windows | bool
+
+# Run Atomic Red Team tests
+- include_tasks: "run_art_linux.yml"
+  with_items: "{{ ar_atomic_red_team_techniques }}"
+  when: ansible_distribution=="Ubuntu"
+
+- include_tasks: "run_art_test_windows.yml"
+  with_items: "{{ ar_atomic_red_team_techniques }}"
+  when: ansible_distribution is match "Microsoft Windows"

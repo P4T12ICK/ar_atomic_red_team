@@ -1,0 +1,21 @@
+---
+name: release
+
+on:
+  release:
+    types:
+      - published
+    secrets:
+      GALAXY_API_KEY:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: galaxy
+        uses: averagebit/action-galaxy@1.0.0
+        with:
+          galaxy_token: ${{ secrets.GALAXY_API_KEY }}

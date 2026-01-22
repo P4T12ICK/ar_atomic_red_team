@@ -1,0 +1,14 @@
+galaxy_info:
+  author: p4t12ick
+  description: Executes Atomic Red Team tests on target machine.
+  company: Splunk
+
+  license: Apache License 2.0
+
+  min_ansible_version: "2.10"
+
+  galaxy_tags:
+    - atomic-red-team
+
+
+dependencies: []

@@ -17,13 +17,13 @@ Available variables are listed below, along with default values (see `defaults/m
 
 ```yaml
 ar_atomic_red_team_techniques: []
-ar_atomic_red_team_guids: []
+ar_atomic_red_team_atomics: []
 ar_atomic_red_team_timeout_seconds: 60
 ar_atomic_red_team_ansible_timeout_buffer_seconds: 30
 ```
 
 - `ar_atomic_red_team_techniques`: A list of MITRE ATT&CK technique IDs to execute (e.g., `["T1003.001", "T1059.003"]`). Runs all atomics for each technique. Default is an empty list.
-- `ar_atomic_red_team_guids`: A list of atomic test `auto_generated_guid` values to execute (e.g., `["5c2571d0-1572-416d-9676-812e64ca9f44"]`). Runs only the matching atomic test. The role resolves each GUID to its technique ID before execution. Default is an empty list.
+- `ar_atomic_red_team_atomics`: A list of specific atomics to execute. Each entry must include `technique` (MITRE ID) and `guid` (`auto_generated_guid` from the atomic YAML). Default is an empty list.
 - `ar_atomic_red_team_timeout_seconds`: Maximum seconds for the atomic test execution step before `Invoke-AtomicTest` aborts. Applies to the main test run only (not prereqs or cleanup). Default is `60`.
 - `ar_atomic_red_team_ansible_timeout_buffer_seconds`: Extra seconds added on top of `ar_atomic_red_team_timeout_seconds` for the Ansible `timeout` on the execution task (hard kill if the test process does not exit). Default is `30` (90s Ansible cap when the atomic timeout is 60s).
 
@@ -70,20 +70,23 @@ None.
     - ar_atomic_red_team
 ```
 
-### Running a Specific Atomic by GUID
+### Running Specific Atomics (technique + GUID)
 
-Use `ar_atomic_red_team_guids` when you need to run exactly one atomic test. GUIDs are stable identifiers from the atomic test YAML (`auto_generated_guid` field).
+Use `ar_atomic_red_team_atomics` when you need to run individual atomic tests. Provide the parent technique ID and the test `auto_generated_guid` from the atomic YAML.
 
 ```yaml
 - hosts: windows_servers
   vars:
-    ar_atomic_red_team_guids:
-      - 5c2571d0-1572-416d-9676-812e64ca9f44
+    ar_atomic_red_team_atomics:
+      - technique: T1003.001
+        guid: 0be2230c-9ab3-4ac2-8826-3199b9a0ebf8
+      - technique: T1059.003
+        guid: 9e8894c0-50bd-4525-a96c-d4ac78ece388
   roles:
     - ar_atomic_red_team
 ```
 
-You can combine technique IDs and GUIDs in the same playbook run. Technique IDs run all atomics for that technique; GUIDs run only the matching test.
+You can combine `ar_atomic_red_team_techniques` (all atomics per technique) and `ar_atomic_red_team_atomics` (single tests) in the same run.
 
 ### Running on Mixed Environments
 
@@ -122,7 +125,7 @@ The role performs the following checks and installations:
 
 ### Execution Phase
 
-For each entry in the execution queue (built from `ar_atomic_red_team_techniques` and/or resolved `ar_atomic_red_team_guids`):
+For each entry in the execution queue (built from `ar_atomic_red_team_techniques` and/or `ar_atomic_red_team_atomics`):
 
 1. **Linux**:
    - Runs `GetPrereqs` to install prerequisites
@@ -134,7 +137,7 @@ For each entry in the execution queue (built from `ar_atomic_red_team_techniques
    - Executes the atomic test with `-TimeoutSeconds`, Ansible task `timeout`, and execution logging
    - Runs `Cleanup` in an `always` block so cleanup still runs after timeouts or failures
 
-When a GUID is provided, the role scans the installed atomics folder to resolve the parent technique ID, then passes `-TestGuids` to `Invoke-AtomicTest`.
+When a `guid` is provided on an entry, the role passes `-TestGuids` to `Invoke-AtomicTest` for that technique.
 
 ## Idempotency
 
@@ -153,7 +156,7 @@ MITRE ATT&CK technique IDs follow the pattern `T####` or `T####.###` (e.g., `T10
 - [Atomic Red Team GitHub](https://github.com/redcanaryco/atomic-red-team)
 - [MITRE ATT&CK Website](https://attack.mitre.org/)
 
-Each atomic test YAML includes an `auto_generated_guid` field. Use that value with `ar_atomic_red_team_guids` to run a single test without executing every atomic for the technique.
+Each atomic test YAML includes an `auto_generated_guid` field. Pair it with the parent technique ID in `ar_atomic_red_team_atomics` to run a single test without executing every atomic for the technique.
 
 ## Customization
 
@@ -197,6 +200,30 @@ Apache License 2.0
 ## Author Information
 
 This role was created by [P4T12ICK](https://github.com/P4T12ICK)
+
+## Integration with Attack Range
+
+Attack Range passes playbook extra vars that map directly to this role:
+
+| Attack Range (`simulate` extra var) | Role variable |
+|-------------------------------------|---------------|
+| `techniques` | `ar_atomic_red_team_techniques` |
+| `atomics[].technique` + `atomics[].guid` | `ar_atomic_red_team_atomics` |
+
+Example API body (`POST /attack-range/simulate`):
+
+```json
+{
+  "attack_range_id": "...",
+  "target": "ar-win-1",
+  "techniques": ["T1059.003"],
+  "atomics": [
+    {"technique": "T1003.001", "guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8"}
+  ]
+}
+```
+
+The detection agent and Attack Range MCP use the same `techniques` / `atomics` shape.
 
 ## Related Projects
 

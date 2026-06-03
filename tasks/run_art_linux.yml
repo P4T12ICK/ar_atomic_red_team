@@ -3,16 +3,32 @@
 - set_fact:
     technique: "{{ item.technique }}"
     atomic_test_guid: "{{ item.guid | default('') }}"
+    ar_atomic_red_team_ansible_execution_timeout: "{{ (ar_atomic_red_team_timeout_seconds | int) + (ar_atomic_red_team_ansible_timeout_buffer_seconds | int) }}"
 
-- name: Run Atomic Red Team
+- name: Get prerequisites for Atomic Red Team (Linux)
   become: true
   shell: |
-    pwsh -Command '{% if atomic_test_guid | length > 0 %}Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}" -GetPrereqs;
-    Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}";
-    Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}" -Cleanup{% else %}Invoke-AtomicTest "{{ technique }}" -GetPrereqs;
-    Invoke-AtomicTest "{{ technique }}";
-    Invoke-AtomicTest "{{ technique }}" -Cleanup{% endif %}'
-  register: output_art
+    pwsh -Command 'Import-Module /root/AtomicRedTeam/invoke-atomicredteam/Invoke-AtomicRedTeam.psd1 -Force;
+    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -GetPrereqs'
+  register: requirements_art
+  ignore_errors: true
+  timeout: 600
+
+- block:
+  - name: Execute Atomic Red Team test (Linux)
+    become: true
+    shell: |
+      pwsh -Command 'Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -TimeoutSeconds {{ ar_atomic_red_team_timeout_seconds }}'
+    register: output_art
+    timeout: "{{ ar_atomic_red_team_ansible_execution_timeout }}"
+
+  always:
+  - name: Cleanup after Atomic Red Team test (Linux)
+    become: true
+    shell: |
+      pwsh -Command 'Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Cleanup'
+    register: cleanup_art
+    timeout: 300
 
 - debug:
     var: output_art.stdout_lines

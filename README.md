@@ -18,10 +18,14 @@ Available variables are listed below, along with default values (see `defaults/m
 ```yaml
 ar_atomic_red_team_techniques: []
 ar_atomic_red_team_guids: []
+ar_atomic_red_team_timeout_seconds: 60
+ar_atomic_red_team_ansible_timeout_buffer_seconds: 30
 ```
 
 - `ar_atomic_red_team_techniques`: A list of MITRE ATT&CK technique IDs to execute (e.g., `["T1003.001", "T1059.003"]`). Runs all atomics for each technique. Default is an empty list.
 - `ar_atomic_red_team_guids`: A list of atomic test `auto_generated_guid` values to execute (e.g., `["5c2571d0-1572-416d-9676-812e64ca9f44"]`). Runs only the matching atomic test. The role resolves each GUID to its technique ID before execution. Default is an empty list.
+- `ar_atomic_red_team_timeout_seconds`: Maximum seconds for the atomic test execution step before `Invoke-AtomicTest` aborts. Applies to the main test run only (not prereqs or cleanup). Default is `60`.
+- `ar_atomic_red_team_ansible_timeout_buffer_seconds`: Extra seconds added on top of `ar_atomic_red_team_timeout_seconds` for the Ansible `timeout` on the execution task (hard kill if the test process does not exit). Default is `30` (90s Ansible cap when the atomic timeout is 60s).
 
 ## Dependencies
 
@@ -122,13 +126,13 @@ For each entry in the execution queue (built from `ar_atomic_red_team_techniques
 
 1. **Linux**:
    - Runs `GetPrereqs` to install prerequisites
-   - Executes the atomic test (all tests for a technique ID, or a single test when a GUID is specified via `-TestGuids`)
-   - Runs `Cleanup` to remove artifacts
+   - Executes the atomic test with `-TimeoutSeconds` and an Ansible task `timeout` of `timeout_seconds + buffer` (default 90s)
+   - Runs `Cleanup` in an `always` block so cleanup still runs after timeouts or failures
 
 2. **Windows**:
    - Runs `GetPrereqs` to install prerequisites
-   - Executes the atomic test with timeout and logging
-   - Runs `Cleanup` to remove artifacts
+   - Executes the atomic test with `-TimeoutSeconds`, Ansible task `timeout`, and execution logging
+   - Runs `Cleanup` in an `always` block so cleanup still runs after timeouts or failures
 
 When a GUID is provided, the role scans the installed atomics folder to resolve the parent technique ID, then passes `-TestGuids` to `Invoke-AtomicTest`.
 

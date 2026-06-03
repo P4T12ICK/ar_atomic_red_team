@@ -5,3 +5,10 @@ ar_atomic_red_team_techniques: []
 
 # A list of atomic test auto_generated_guid values to execute (runs a single atomic per GUID)
 ar_atomic_red_team_guids: []
+
+# Maximum seconds for atomic test execution before Invoke-AtomicTest aborts the test
+ar_atomic_red_team_timeout_seconds: 60
+
+# Extra seconds added to ar_atomic_red_team_timeout_seconds for the Ansible task timeout
+# (kills the remote shell if Invoke-AtomicTest does not stop in time)
+ar_atomic_red_team_ansible_timeout_buffer_seconds: 30

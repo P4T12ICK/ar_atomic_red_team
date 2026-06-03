@@ -1,6 +1,7 @@
 - set_fact:
     technique: "{{ item.technique }}"
     atomic_test_guid: "{{ item.guid | default('') }}"
+    ar_atomic_red_team_ansible_execution_timeout: "{{ (ar_atomic_red_team_timeout_seconds | int) + (ar_atomic_red_team_ansible_timeout_buffer_seconds | int) }}"
 
 - debug:
     var: technique
@@ -11,21 +12,25 @@
     Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -GetPrereqs
   register: requirements
   ignore_errors: True
+  timeout: 600
 
-- name:  Run specified Atomic Red Team Technique
-  win_shell: |
-    Set-ExecutionPolicy bypass
-    Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
-    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Confirm:$false -TimeoutSeconds 300 -ExecutionLogPath C:\AtomicRedTeam\atc_execution.csv
-  register: output_art
-  ignore_errors: True
+- block:
+  - name: Run specified Atomic Red Team Technique
+    win_shell: |
+      Set-ExecutionPolicy bypass
+      Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
+      Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Confirm:$false -TimeoutSeconds {{ ar_atomic_red_team_timeout_seconds }} -ExecutionLogPath C:\AtomicRedTeam\atc_execution.csv
+    register: output_art
+    ignore_errors: True
+    timeout: "{{ ar_atomic_red_team_ansible_execution_timeout }}"
+
+  always:
+  - name: Cleanup after execution
+    win_shell: |
+      Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
+      Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Cleanup
+    register: cleanup
+    timeout: 300
 
 - debug:
     var: output_art.stdout_lines
-
-- name: Cleanup after execution
-  win_shell: |
-    Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
-    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Cleanup
-  register: cleanup
-

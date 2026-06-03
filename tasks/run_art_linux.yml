@@ -1,14 +1,17 @@
 ---
 
 - set_fact:
-    technique: "{{ item }}"
+    technique: "{{ item.technique }}"
+    atomic_test_guid: "{{ item.guid | default('') }}"
 
 - name: Run Atomic Red Team
   become: true
   shell: |
-    pwsh -Command 'Invoke-AtomicTest "{{ technique }}" -GetPrereqs; 
+    pwsh -Command '{% if atomic_test_guid | length > 0 %}Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}" -GetPrereqs;
+    Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}";
+    Invoke-AtomicTest "{{ technique }}" -TestGuids "{{ atomic_test_guid }}" -Cleanup{% else %}Invoke-AtomicTest "{{ technique }}" -GetPrereqs;
     Invoke-AtomicTest "{{ technique }}";
-    Invoke-AtomicTest "{{ technique }}" -Cleanup'
+    Invoke-AtomicTest "{{ technique }}" -Cleanup{% endif %}'
   register: output_art
 
 - debug:

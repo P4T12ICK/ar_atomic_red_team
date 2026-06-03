@@ -1,4 +1,7 @@
 ---
 
-# A list of mitre att&ck technique ids to execute
+# A list of mitre att&ck technique ids to execute (runs all atomics for each technique)
 ar_atomic_red_team_techniques: []
+
+# A list of atomic test auto_generated_guid values to execute (runs a single atomic per GUID)
+ar_atomic_red_team_guids: []

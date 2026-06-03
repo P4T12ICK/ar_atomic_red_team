@@ -1,5 +1,6 @@
 - set_fact:
-    technique: "{{ item }}"
+    technique: "{{ item.technique }}"
+    atomic_test_guid: "{{ item.guid | default('') }}"
 
 - debug:
     var: technique
@@ -7,7 +8,7 @@
 - name: Get requirements for Atomic Red Team Technique
   win_shell: |
     Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
-    Invoke-AtomicTest "{{ technique }}" -GetPrereqs
+    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -GetPrereqs
   register: requirements
   ignore_errors: True
 
@@ -15,7 +16,7 @@
   win_shell: |
     Set-ExecutionPolicy bypass
     Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
-    Invoke-AtomicTest "{{ technique }}" -Confirm:$false -TimeoutSeconds 300 -ExecutionLogPath C:\AtomicRedTeam\atc_execution.csv
+    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Confirm:$false -TimeoutSeconds 300 -ExecutionLogPath C:\AtomicRedTeam\atc_execution.csv
   register: output_art
   ignore_errors: True
 
@@ -25,6 +26,6 @@
 - name: Cleanup after execution
   win_shell: |
     Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
-    Invoke-AtomicTest "{{ technique }}" -Cleanup
+    Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Cleanup
   register: cleanup
 

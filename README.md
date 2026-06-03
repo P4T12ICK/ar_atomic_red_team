@@ -17,9 +17,11 @@ Available variables are listed below, along with default values (see `defaults/m
 
 ```yaml
 ar_atomic_red_team_techniques: []
+ar_atomic_red_team_guids: []
 ```
 
-- `ar_atomic_red_team_techniques`: A list of MITRE ATT&CK technique IDs to execute (e.g., `["T1003.001", "T1059.003"]`). Default is an empty list.
+- `ar_atomic_red_team_techniques`: A list of MITRE ATT&CK technique IDs to execute (e.g., `["T1003.001", "T1059.003"]`). Runs all atomics for each technique. Default is an empty list.
+- `ar_atomic_red_team_guids`: A list of atomic test `auto_generated_guid` values to execute (e.g., `["5c2571d0-1572-416d-9676-812e64ca9f44"]`). Runs only the matching atomic test. The role resolves each GUID to its technique ID before execution. Default is an empty list.
 
 ## Dependencies
 
@@ -64,6 +66,21 @@ None.
     - ar_atomic_red_team
 ```
 
+### Running a Specific Atomic by GUID
+
+Use `ar_atomic_red_team_guids` when you need to run exactly one atomic test. GUIDs are stable identifiers from the atomic test YAML (`auto_generated_guid` field).
+
+```yaml
+- hosts: windows_servers
+  vars:
+    ar_atomic_red_team_guids:
+      - 5c2571d0-1572-416d-9676-812e64ca9f44
+  roles:
+    - ar_atomic_red_team
+```
+
+You can combine technique IDs and GUIDs in the same playbook run. Technique IDs run all atomics for that technique; GUIDs run only the matching test.
+
 ### Running on Mixed Environments
 
 ```yaml
@@ -101,17 +118,19 @@ The role performs the following checks and installations:
 
 ### Execution Phase
 
-For each technique specified in `ar_atomic_red_team_techniques`:
+For each entry in the execution queue (built from `ar_atomic_red_team_techniques` and/or resolved `ar_atomic_red_team_guids`):
 
 1. **Linux**:
    - Runs `GetPrereqs` to install prerequisites
-   - Executes the atomic test
+   - Executes the atomic test (all tests for a technique ID, or a single test when a GUID is specified via `-TestGuids`)
    - Runs `Cleanup` to remove artifacts
 
 2. **Windows**:
    - Runs `GetPrereqs` to install prerequisites
    - Executes the atomic test with timeout and logging
    - Runs `Cleanup` to remove artifacts
+
+When a GUID is provided, the role scans the installed atomics folder to resolve the parent technique ID, then passes `-TestGuids` to `Invoke-AtomicTest`.
 
 ## Idempotency
 
@@ -122,13 +141,15 @@ This role is **idempotent** - it checks for existing Atomic Red Team installatio
 - Only installs missing components
 - Reduces execution time on subsequent runs
 
-## Finding Technique IDs
+## Finding Technique IDs and Atomic GUIDs
 
 MITRE ATT&CK technique IDs follow the pattern `T####` or `T####.###` (e.g., `T1003.001`). You can find techniques at:
 
 - [MITRE ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
 - [Atomic Red Team GitHub](https://github.com/redcanaryco/atomic-red-team)
 - [MITRE ATT&CK Website](https://attack.mitre.org/)
+
+Each atomic test YAML includes an `auto_generated_guid` field. Use that value with `ar_atomic_red_team_guids` to run a single test without executing every atomic for the technique.
 
 ## Customization
 

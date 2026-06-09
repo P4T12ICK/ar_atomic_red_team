@@ -1,0 +1,116 @@
+---
+
+- name: Load custom atomic YAML from path
+  delegate_to: localhost
+  slurp:
+    src: "{{ atomic_file_item.path }}"
+  register: atomic_yaml_slurp
+  when: atomic_file_item.path is defined and atomic_file_item.path | length > 0
+
+- name: Parse custom atomic YAML from path
+  set_fact:
+    atomic_yaml_parsed: "{{ atomic_yaml_slurp.content | b64decode | from_yaml }}"
+  when: atomic_file_item.path is defined and atomic_file_item.path | length > 0
+
+- name: Parse custom atomic YAML from inline content
+  set_fact:
+    atomic_yaml_parsed: "{{ atomic_file_item.content | from_yaml }}"
+  when: atomic_file_item.content is defined and atomic_file_item.content | length > 0
+
+- name: Resolve technique and guid for custom atomic file
+  set_fact:
+    atomic_technique: "{{ atomic_file_item.technique | default(atomic_yaml_parsed.attack_technique | default('')) }}"
+    atomic_guid: >-
+      {%- if atomic_file_item.guid is defined and atomic_file_item.guid | length > 0 -%}
+      {{ atomic_file_item.guid }}
+      {%- elif atomic_yaml_parsed.atomic_tests | default([]) | length == 1 -%}
+      {{ atomic_yaml_parsed.atomic_tests[0].auto_generated_guid }}
+      {%- else -%}
+      {{ '' }}
+      {%- endif -%}
+
+- name: Fail when custom atomic technique cannot be resolved
+  fail:
+    msg: >-
+      Custom atomic file must include attack_technique in YAML or an explicit technique field.
+      Entry: {{ atomic_file_item }}
+  when: atomic_technique | length == 0
+
+- name: Ensure technique directory exists (Linux)
+  become: true
+  file:
+    path: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}"
+    state: directory
+    mode: "0755"
+  when: ansible_distribution == "Ubuntu"
+
+- name: Deploy custom atomic YAML from path (Linux)
+  become: true
+  copy:
+    src: "{{ atomic_file_item.path }}"
+    dest: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}/{{ atomic_technique }}.yaml"
+    mode: "0644"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.path is defined
+    - atomic_file_item.path | length > 0
+
+- name: Deploy custom atomic YAML from content (Linux)
+  become: true
+  copy:
+    content: "{{ atomic_file_item.content }}"
+    dest: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}/{{ atomic_technique }}.yaml"
+    mode: "0644"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.content is defined
+    - atomic_file_item.content | length > 0
+
+- name: Ensure technique directory exists (Windows)
+  win_file:
+    path: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}"
+    state: directory
+  when: ansible_distribution is match "Microsoft Windows"
+
+- name: Deploy custom atomic YAML from path (Windows)
+  win_copy:
+    src: "{{ atomic_file_item.path }}"
+    dest: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}\\{{ atomic_technique }}.yaml"
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.path is defined
+    - atomic_file_item.path | length > 0
+
+- name: Deploy custom atomic YAML from content (Windows)
+  win_copy:
+    content: "{{ atomic_file_item.content }}"
+    dest: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}\\{{ atomic_technique }}.yaml"
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.content is defined
+    - atomic_file_item.content | length > 0
+
+- name: Deploy custom atomic src directory from path (Linux)
+  become: true
+  copy:
+    src: "{{ atomic_file_item.src_dir }}/"
+    dest: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}/src/"
+    mode: preserve
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.src_dir is defined
+    - atomic_file_item.src_dir | length > 0
+
+- name: Deploy custom atomic src directory from path (Windows)
+  win_copy:
+    src: "{{ atomic_file_item.src_dir }}/"
+    dest: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}\\src\\"
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.src_dir is defined
+    - atomic_file_item.src_dir | length > 0
+
+- name: Record staged atomic execution
+  set_fact:
+    ar_atomic_red_team_staged_executions: >-
+      {{ ar_atomic_red_team_staged_executions + [{'technique': atomic_technique, 'guid': atomic_guid}] }}

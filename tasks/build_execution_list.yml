@@ -7,6 +7,9 @@
       {%- for atomic in ar_atomic_red_team_atomics -%}
       {%- set _ = executions.append({'technique': atomic.technique, 'guid': atomic.guid}) -%}
       {%- endfor -%}
+      {%- for staged in ar_atomic_red_team_staged_executions | default([]) -%}
+      {%- set _ = executions.append({'technique': staged.technique, 'guid': staged.guid | default('')}) -%}
+      {%- endfor -%}
       {%- for technique_id in ar_atomic_red_team_techniques -%}
       {%- set _ = executions.append({'technique': technique_id, 'guid': ''}) -%}
       {%- endfor -%}

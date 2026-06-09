@@ -50,8 +50,14 @@
 - include_tasks: "install_atomic_red_team_win.yml"
   when: ansible_distribution is match "Microsoft Windows" and art_needs_installation_windows | bool
 
+- include_tasks: "stage_atomic_files.yml"
+  when: ar_atomic_red_team_atomic_files | length > 0
+
 - include_tasks: "build_execution_list.yml"
-  when: ar_atomic_red_team_techniques | length > 0 or ar_atomic_red_team_atomics | length > 0
+  when: >
+    ar_atomic_red_team_techniques | length > 0 or
+    ar_atomic_red_team_atomics | length > 0 or
+    ar_atomic_red_team_atomic_files | length > 0
 
 # Run Atomic Red Team tests
 - include_tasks: "run_art_linux.yml"

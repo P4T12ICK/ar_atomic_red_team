@@ -1,0 +1,11 @@
+---
+
+- name: Initialize staged atomic executions list
+  set_fact:
+    ar_atomic_red_team_staged_executions: []
+
+- name: Stage custom atomic files
+  include_tasks: stage_single_atomic_file.yml
+  loop: "{{ ar_atomic_red_team_atomic_files }}"
+  loop_control:
+    loop_var: atomic_file_item

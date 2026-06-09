@@ -18,12 +18,14 @@ Available variables are listed below, along with default values (see `defaults/m
 ```yaml
 ar_atomic_red_team_techniques: []
 ar_atomic_red_team_atomics: []
+ar_atomic_red_team_atomic_files: []
 ar_atomic_red_team_timeout_seconds: 60
 ar_atomic_red_team_ansible_timeout_buffer_seconds: 30
 ```
 
 - `ar_atomic_red_team_techniques`: A list of MITRE ATT&CK technique IDs to execute (e.g., `["T1003.001", "T1059.003"]`). Runs all atomics for each technique. Default is an empty list.
 - `ar_atomic_red_team_atomics`: A list of specific atomics to execute. Each entry must include `technique` (MITRE ID) and `guid` (`auto_generated_guid` from the atomic YAML). Default is an empty list.
+- `ar_atomic_red_team_atomic_files`: Custom atomic YAML files to deploy to the target host and execute. Each entry requires `path` (on the Ansible controller) or `content` (inline YAML). Optional: `technique`, `guid`, `src_dir` (companion `src/` folder for dependencies). Default is an empty list.
 - `ar_atomic_red_team_timeout_seconds`: Maximum seconds for the atomic test execution step before `Invoke-AtomicTest` aborts. Applies to the main test run only (not prereqs or cleanup). Default is `60`.
 - `ar_atomic_red_team_ansible_timeout_buffer_seconds`: Extra seconds added on top of `ar_atomic_red_team_timeout_seconds` for the Ansible `timeout` on the execution task (hard kill if the test process does not exit). Default is `30` (90s Ansible cap when the atomic timeout is 60s).
 
@@ -88,6 +90,33 @@ Use `ar_atomic_red_team_atomics` when you need to run individual atomic tests. P
 
 You can combine `ar_atomic_red_team_techniques` (all atomics per technique) and `ar_atomic_red_team_atomics` (single tests) in the same run.
 
+### Running Custom Atomic YAML Files
+
+Deploy and execute custom atomic YAML (for example, tests generated outside the stock Atomic Red Team repository):
+
+```yaml
+- hosts: windows_servers
+  vars:
+    ar_atomic_red_team_atomic_files:
+      - path: /path/on/controller/T1003.001.yaml
+      - path: /path/on/controller/custom.yaml
+        guid: 0be2230c-9ab3-4ac2-8826-3199b9a0ebf8
+      - content: |
+          attack_technique: T9999
+          display_name: Custom Test
+          atomic_tests:
+            - name: My custom test
+              auto_generated_guid: 11111111-2222-3333-4444-555555555555
+              description: Custom atomic for testing
+              executor:
+                name: command_prompt
+                command: echo custom atomic
+  roles:
+    - ar_atomic_red_team
+```
+
+The role copies each file to `{atomics_root}/{technique}/{technique}.yaml` on the target host, then runs it via `Invoke-AtomicTest`. When `guid` is omitted and the YAML contains a single atomic test, that test's `auto_generated_guid` is used automatically.
+
 ### Running on Mixed Environments
 
 ```yaml
@@ -125,7 +154,7 @@ The role performs the following checks and installations:
 
 ### Execution Phase
 
-For each entry in the execution queue (built from `ar_atomic_red_team_techniques` and/or `ar_atomic_red_team_atomics`):
+For each entry in the execution queue (built from `ar_atomic_red_team_techniques`, `ar_atomic_red_team_atomics`, and/or `ar_atomic_red_team_atomic_files`):
 
 1. **Linux**:
    - Runs `GetPrereqs` to install prerequisites
@@ -209,6 +238,7 @@ Attack Range passes playbook extra vars that map directly to this role:
 |-------------------------------------|---------------|
 | `techniques` | `ar_atomic_red_team_techniques` |
 | `atomics[].technique` + `atomics[].guid` | `ar_atomic_red_team_atomics` |
+| `atomic_files[]` | `ar_atomic_red_team_atomic_files` |
 
 Example API body (`POST /attack-range/simulate`):
 
@@ -219,11 +249,15 @@ Example API body (`POST /attack-range/simulate`):
   "techniques": ["T1059.003"],
   "atomics": [
     {"technique": "T1003.001", "guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8"}
+  ],
+  "atomic_files": [
+    {"path": "/path/on/controller/custom.yaml"},
+    {"content": "attack_technique: T9999\n...", "guid": "11111111-2222-3333-4444-555555555555"}
   ]
 }
 ```
 
-The detection agent and Attack Range MCP use the same `techniques` / `atomics` shape.
+The detection agent and Attack Range MCP use the same `techniques` / `atomics` / `atomic_files` shape.
 
 ## Related Projects
 

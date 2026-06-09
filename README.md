@@ -168,6 +168,10 @@ For each entry in the execution queue (built from `ar_atomic_red_team_techniques
 
 When a `guid` is provided on an entry, the role passes `-TestGuids` to `Invoke-AtomicTest` for that technique.
 
+After all tests run, the role records per-atomic results in `ar_atomic_red_team_execution_results`
+(technique, guid, success, return_code, stdout/stderr) and emits an **Atomic Red Team execution
+summary** debug task for downstream consumers (Attack Range API, detection agent).
+
 ## Idempotency
 
 This role is **idempotent** - it checks for existing Atomic Red Team installations before attempting to install. This means:

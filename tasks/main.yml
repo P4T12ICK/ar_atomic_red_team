@@ -59,6 +59,11 @@
     ar_atomic_red_team_atomics | length > 0 or
     ar_atomic_red_team_atomic_files | length > 0
 
+- name: Initialize atomic execution results
+  set_fact:
+    ar_atomic_red_team_execution_results: []
+  when: ar_atomic_red_team_executions | default([]) | length > 0
+
 # Run Atomic Red Team tests
 - include_tasks: "run_art_linux.yml"
   with_items: "{{ ar_atomic_red_team_executions }}"
@@ -67,3 +72,6 @@
 - include_tasks: "run_art_test_windows.yml"
   with_items: "{{ ar_atomic_red_team_executions }}"
   when: ansible_distribution is match "Microsoft Windows" and ar_atomic_red_team_executions | default([]) | length > 0
+
+- include_tasks: "report_execution_results.yml"
+  when: ar_atomic_red_team_executions | default([]) | length > 0

@@ -32,5 +32,5 @@
     register: cleanup
     timeout: 300
 
-- debug:
-    var: output_art.stdout_lines
+- include_tasks: record_atomic_execution_result.yml
+  when: output_art is defined

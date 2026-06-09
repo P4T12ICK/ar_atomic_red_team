@@ -1,0 +1,17 @@
+---
+
+- name: Build atomic execution summary
+  set_fact:
+    ar_atomic_red_team_execution_summary:
+      total: "{{ ar_atomic_red_team_execution_results | default([]) | length }}"
+      succeeded: "{{ ar_atomic_red_team_execution_results | default([]) | selectattr('success', 'equalto', true) | list | length }}"
+      failed: "{{ ar_atomic_red_team_execution_results | default([]) | rejectattr('success', 'equalto', true) | list | length }}"
+  when: ar_atomic_red_team_execution_results | default([]) | length > 0
+
+- name: Atomic Red Team execution summary
+  debug:
+    msg:
+      results: "{{ ar_atomic_red_team_execution_results | default([]) }}"
+      summary: "{{ ar_atomic_red_team_execution_summary | default({}) }}"
+  when: ar_atomic_red_team_execution_results | default([]) | length > 0
+  changed_when: false

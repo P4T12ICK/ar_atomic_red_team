@@ -1,0 +1,20 @@
+---
+
+- name: Record atomic execution result
+  set_fact:
+    ar_atomic_red_team_execution_results: >-
+      {{ ar_atomic_red_team_execution_results | default([]) + [{
+        'technique': technique,
+        'guid': atomic_test_guid | default(''),
+        'success': (
+          not (output_art.failed | default(false) | bool)
+          and (output_art.rc | default(1) | int) == 0
+        ),
+        'failed': output_art.failed | default(false) | bool,
+        'return_code': output_art.rc | default(-1) | int,
+        'stdout': output_art.stdout | default(''),
+        'stderr': output_art.stderr | default(''),
+        'stdout_lines': output_art.stdout_lines | default([]),
+        'stderr_lines': output_art.stderr_lines | default([]),
+        'error': output_art.msg | default('')
+      }] }}

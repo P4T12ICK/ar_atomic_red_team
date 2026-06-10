@@ -17,7 +17,6 @@
 - block:
   - name: Run specified Atomic Red Team Technique
     win_shell: |
-      Set-ExecutionPolicy bypass
       Import-Module "C:\AtomicRedTeam\invoke-atomicredteam\Invoke-AtomicRedTeam.psd1" -Force
       Invoke-AtomicTest "{{ technique }}"{% if atomic_test_guid | length > 0 %} -TestGuids "{{ atomic_test_guid }}"{% endif %} -Confirm:$false -TimeoutSeconds {{ ar_atomic_red_team_timeout_seconds }} -ExecutionLogPath C:\AtomicRedTeam\atc_execution.csv
     register: output_art

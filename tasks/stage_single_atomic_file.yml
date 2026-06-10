@@ -110,6 +110,72 @@
     - atomic_file_item.src_dir is defined
     - atomic_file_item.src_dir | length > 0
 
+- name: Ensure atomic src directory exists for inline files (Linux)
+  become: true
+  file:
+    path: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}/src"
+    state: directory
+    mode: "0755"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
+- name: Write inline atomic src files on controller (Linux)
+  delegate_to: localhost
+  copy:
+    dest: "/tmp/atomic_staging/{{ atomic_technique }}/{{ item.name }}"
+    content: "{{ item.content_base64 | b64decode }}"
+    mode: "0644"
+  loop: "{{ atomic_file_item.src_files | default([]) }}"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
+- name: Deploy inline atomic src files (Linux)
+  become: true
+  copy:
+    src: "/tmp/atomic_staging/{{ atomic_technique }}/{{ item.name }}"
+    dest: "/root/AtomicRedTeam/atomics/{{ atomic_technique }}/src/{{ item.name }}"
+    mode: "0644"
+  loop: "{{ atomic_file_item.src_files | default([]) }}"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
+- name: Ensure atomic src directory exists for inline files (Windows)
+  win_file:
+    path: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}\\src"
+    state: directory
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
+- name: Write inline atomic src files on controller (Windows)
+  delegate_to: localhost
+  copy:
+    dest: "/tmp/atomic_staging/{{ atomic_technique }}/{{ item.name }}"
+    content: "{{ item.content_base64 | b64decode }}"
+    mode: "0644"
+  loop: "{{ atomic_file_item.src_files | default([]) }}"
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
+- name: Deploy inline atomic src files (Windows)
+  win_copy:
+    src: "/tmp/atomic_staging/{{ atomic_technique }}/{{ item.name }}"
+    dest: "C:\\AtomicRedTeam\\atomics\\{{ atomic_technique }}\\src\\{{ item.name }}"
+  loop: "{{ atomic_file_item.src_files | default([]) }}"
+  when:
+    - ansible_distribution is match "Microsoft Windows"
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
 - name: Record staged atomic execution
   set_fact:
     ar_atomic_red_team_staged_executions: >-

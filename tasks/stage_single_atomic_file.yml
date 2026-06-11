@@ -118,6 +118,16 @@
     - atomic_file_item.src_dir is defined
     - atomic_file_item.src_dir | length > 0
 
+- name: Ensure atomic staging directory exists on controller
+  delegate_to: localhost
+  file:
+    path: "/tmp/atomic_staging/{{ atomic_technique }}"
+    state: directory
+    mode: "0755"
+  when:
+    - atomic_file_item.src_files is defined
+    - atomic_file_item.src_files | length > 0
+
 - name: Ensure atomic src directory exists for inline files (Linux)
   become: true
   file:

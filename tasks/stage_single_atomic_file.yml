@@ -5,12 +5,18 @@
   slurp:
     src: "{{ atomic_file_item.path }}"
   register: atomic_yaml_slurp
-  when: atomic_file_item.path is defined and atomic_file_item.path | length > 0
+  when:
+    - atomic_file_item.path is defined
+    - atomic_file_item.path | length > 0
+    - atomic_file_item.content is not defined or atomic_file_item.content | length == 0
 
 - name: Parse custom atomic YAML from path
   set_fact:
     atomic_yaml_parsed: "{{ atomic_yaml_slurp.content | b64decode | from_yaml }}"
-  when: atomic_file_item.path is defined and atomic_file_item.path | length > 0
+  when:
+    - atomic_file_item.path is defined
+    - atomic_file_item.path | length > 0
+    - atomic_file_item.content is not defined or atomic_file_item.content | length == 0
 
 - name: Parse custom atomic YAML from inline content
   set_fact:
@@ -54,6 +60,7 @@
     - ansible_distribution == "Ubuntu"
     - atomic_file_item.path is defined
     - atomic_file_item.path | length > 0
+    - atomic_file_item.content is not defined or atomic_file_item.content | length == 0
 
 - name: Deploy custom atomic YAML from content (Linux)
   become: true
@@ -80,6 +87,7 @@
     - ansible_distribution is match "Microsoft Windows"
     - atomic_file_item.path is defined
     - atomic_file_item.path | length > 0
+    - atomic_file_item.content is not defined or atomic_file_item.content | length == 0
 
 - name: Deploy custom atomic YAML from content (Windows)
   win_copy:
